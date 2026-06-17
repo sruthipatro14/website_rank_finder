@@ -30,7 +30,10 @@ export async function fetchSerpResults(
     throw new Error('Missing SERP_API_KEY environment variable');
   }
 
-  const countryParam = engine === 'google' ? `gl=${country}` : `cc=${country}`;
+  let countryParam = engine === 'google' ? `gl=${country}` : `cc=${country}`;
+  if (engine === 'google' && country === 'ae') {
+    countryParam += '&hl=en';
+  }
   const serpApiUrl = `https://serpapi.com/search.json?engine=${engine}&q=${encodeURIComponent(keyword)}&num=100&${countryParam}&device=${device}&api_key=${apiKey}`;
   console.debug(`[serp] Fetching SerpApi for keyword: "${keyword}" (URL: ${serpApiUrl.split('api_key=')[0]}...)`);
 

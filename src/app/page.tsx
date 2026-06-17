@@ -19,6 +19,20 @@ const COUNTRY_OPTIONS = [
   { label: 'United Kingdom', value: 'uk' },
   { label: 'Canada', value: 'ca' },
   { label: 'Australia', value: 'au' },
+  { label: 'United Arab Emirates', value: 'ae' },
+  { label: 'Singapore', value: 'sg' },
+  { label: 'Saudi Arabia', value: 'sa' },
+  { label: 'Qatar', value: 'qa' },
+  { label: 'Kuwait', value: 'kw' },
+  { label: 'Oman', value: 'om' },
+  { label: 'Bahrain', value: 'bh' },
+  { label: 'Germany', value: 'de' },
+  { label: 'France', value: 'fr' },
+  { label: 'Spain', value: 'es' },
+  { label: 'Italy', value: 'it' },
+  { label: 'Netherlands', value: 'nl' },
+  { label: 'South Africa', value: 'za' },
+  { label: 'New Zealand', value: 'nz' },
 ];
 
 export default function HomePage() {
@@ -27,6 +41,7 @@ export default function HomePage() {
   const [results, setResults] = useState<RankResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [engine, setEngine] = useState('google');
+  const [searchedEngine, setSearchedEngine] = useState<string | null>(null);
   const [country, setCountry] = useState<CountryCode>('in');
   const [device, setDevice] = useState<DeviceType>('desktop');
   const [searchedCountry, setSearchedCountry] = useState<CountryCode | null>(null);
@@ -51,6 +66,7 @@ export default function HomePage() {
     setLoading(true);
     setSearchedCountry(country);
     setSearchedDevice(device);
+    setSearchedEngine(engine);
 
     try {
       const targetDomain = url.trim();
@@ -96,6 +112,55 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportCsv = () => {
+    if (results.length === 0) return;
+
+    const headers = [
+      'Keyword',
+      'Rank',
+      'Page',
+      'Position On Page',
+      'Ranking URL',
+      'Search Engine',
+      'Country',
+      'Device',
+      'Timestamp',
+    ];
+
+    const timestamp = new Date().toLocaleString();
+    const dateStr = new Date().toISOString().split('T')[0];
+    const countryLabel = COUNTRY_OPTIONS.find((c) => c.value === searchedCountry)?.label || searchedCountry || 'N/A';
+    const engineLabel = searchedEngine ? searchedEngine.charAt(0).toUpperCase() + searchedEngine.slice(1) : 'N/A';
+
+    const csvRows = results.map((res) => {
+      const deviceLabel = res.device !== '-' ? res.device.charAt(0).toUpperCase() + res.device.slice(1) : '-';
+      const row = [
+        res.keyword,
+        res.rank,
+        res.page,
+        res.positionOnPage,
+        res.rankingUrl,
+        engineLabel,
+        countryLabel,
+        deviceLabel,
+        timestamp,
+      ];
+      return row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.setAttribute('download', `rankings-${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
   };
 
   return (
@@ -237,19 +302,31 @@ export default function HomePage() {
 
         {results.length > 0 ? (
           <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/30">
-            <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Results</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-900">
                   Keyword ranking overview
                   {searchedCountry && (
                     <span className="ml-2 text-slate-500">
-                      ({COUNTRY_OPTIONS.find(c => c.value === searchedCountry)?.label} • {searchedDevice})
+                      ({searchedCountry === 'ae' ? 'UAE' : COUNTRY_OPTIONS.find((c) => c.value === searchedCountry)?.label} •{' '}
+                      {searchedDevice
+                        ? searchedDevice.charAt(0).toUpperCase() + searchedDevice.slice(1)
+                        : ''})
                     </span>
                   )}
                 </h2>
               </div>
-              <p className="text-sm text-slate-600">Showing {results.length} keyword{results.length > 1 ? 's' : ''}.</p>
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-slate-600">Showing {results.length} keyword{results.length > 1 ? 's' : ''}.</p>
+                <button
+                  onClick={handleExportCsv}
+                  disabled={results.length === 0}
+                  className="inline-flex items-center justify-center rounded-2xl bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                >
+                  Export CSV
+                </button>
+              </div>
             </div>
             <RankTable results={results} />
           </section>
