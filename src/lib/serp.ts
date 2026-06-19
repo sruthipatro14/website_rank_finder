@@ -16,6 +16,17 @@ export function getDomain(url: string): string {
   }
 }
 
+/**
+ * Returns true if the result URL belongs to the target domain or any of its subdomains.
+ * Matches: exact root domain, www, and subdomains (e.g. blog.example.com).
+ * Does NOT match unrelated domains that happen to end with the same string.
+ */
+export function isDomainMatch(resultUrl: string, targetDomain: string): boolean {
+  const result = getDomain(resultUrl);
+  const target = getDomain(targetDomain);
+  return result === target || result.endsWith(`.${target}`);
+}
+
 export async function fetchSerpResults(
   keyword: string,
   engine: string = 'google',
@@ -34,34 +45,52 @@ export async function fetchSerpResults(
   if (engine === 'google' && country === 'ae') {
     countryParam += '&hl=en';
   }
-  const serpApiUrl = `https://serpapi.com/search.json?engine=${engine}&q=${encodeURIComponent(keyword)}&num=100&${countryParam}&device=${device}&api_key=${apiKey}`;
-  console.debug(`[serp] Fetching SerpApi for keyword: "${keyword}" (URL: ${serpApiUrl.split('api_key=')[0]}...)`);
+
+  const PAGES = [0, 10, 20]; // start offsets covering positions 1–30
+  let lastStatus: number | null = null;
+  const allRaw: any[] = [];
 
   try {
-    const res = await fetch(serpApiUrl);
-    console.debug(`[serp] SerpApi response status for "${keyword}":`, res.status);
-    const data = await res.json();
+    for (const start of PAGES) {
+      const serpApiUrl = `https://serpapi.com/search.json?engine=${engine}&q=${encodeURIComponent(keyword)}&num=10&start=${start}&${countryParam}&device=${device}&api_key=${apiKey}`;
+      console.debug(`[serp] Fetching page start=${start} for "${keyword}" (URL: ${serpApiUrl.split('api_key=')[0]}...)`);
 
-    if (!res.ok) {
-      // SerpApi often returns error messages in the JSON body even for non-200 statuses
-      const errorMessage = data.error || data.error_message || `SerpApi returned status ${res.status}`;
-      throw new Error(`SerpApi error for "${keyword}": ${errorMessage}`);
+      const res = await fetch(serpApiUrl);
+      lastStatus = res.status;
+      console.debug(`[serp] Response status for "${keyword}" start=${start}:`, res.status);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMessage = data.error || data.error_message || `SerpApi returned status ${res.status}`;
+        throw new Error(`SerpApi error for "${keyword}" (start=${start}): ${errorMessage}`);
+      }
+
+      const pageOrganic: any[] = data.organic_results || [];
+      console.debug(`[serp] Page start=${start} returned ${pageOrganic.length} results for "${keyword}"`);
+
+      if (pageOrganic.length === 0) {
+        console.debug(`[serp] Empty page at start=${start} for "${keyword}", stopping early`);
+        break;
+      }
+
+      allRaw.push(...pageOrganic);
     }
 
-    const mappedResults: SerpSearchResult[] = (data.organic_results || []).map(
-      (item: any, index: number) => ({
-        position: item.position || index + 1,
-        title: item.title || item.snippet || '',
-        displayedUrl: item.displayed_link || item.domain || '',
-        link: item.link || item.url || '',
-      }),
-    );
+    console.debug(`[serp] Total merged organic results for "${keyword}":`, allRaw.length);
+    console.debug(`[serp] First position for "${keyword}":`, allRaw[0]?.position ?? 'n/a');
+    console.debug(`[serp] Last  position for "${keyword}":`, allRaw[allRaw.length - 1]?.position ?? 'n/a');
 
-    console.debug(`[serp] Organic results count for "${keyword}":`, mappedResults.length);
-    return { results: mappedResults, status: res.status };
+    const mappedResults: SerpSearchResult[] = allRaw.map((item: any) => ({
+      position: item.position,
+      title: item.title || item.snippet || '',
+      displayedUrl: item.displayed_link || item.domain || '',
+      link: item.link || item.url || '',
+    }));
+
+    return { results: mappedResults, status: lastStatus };
   } catch (error) {
     console.error(`[serp] Error fetching SerpApi for "${keyword}":`, error);
-    // Re-throw to be caught by checkKeywordRanking and then by the API route
     throw error;
   }
 }
@@ -88,12 +117,14 @@ export async function checkKeywordRanking(
     throw error; // Re-throw the error to be caught by the API route
   }
 
-  const normalizedTarget = targetDomain.toLowerCase();
-
-  const found = results.find((result) => {
-    const resultDomain = getDomain(result.link); // Use the robust getDomain helper
-    return resultDomain === normalizedTarget;
+  console.debug(`[serp:match] keyword="${keyword}" target="${targetDomain}" total results=${results.length}`);
+  results.forEach((result) => {
+    const matched = isDomainMatch(result.link, targetDomain);
+    console.debug(`[serp:match] Position: ${result.position} | URL: ${result.link} | Matched: ${matched}`);
   });
+
+  const sorted = [...results].sort((a, b) => a.position - b.position);
+  const found = sorted.find((result) => isDomainMatch(result.link, targetDomain));
 
   if (!found) {
     return {
