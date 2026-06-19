@@ -27,6 +27,78 @@ export function isDomainMatch(resultUrl: string, targetDomain: string): boolean 
   return result === target || result.endsWith(`.${target}`);
 }
 
+// Error message fragments that indicate an API availability / credit / key issue.
+// Only these trigger fallback to Serper. Coding bugs and parse errors do not.
+const FALLBACK_TRIGGERS = [
+  'credit', 'quota', 'rate limit', 'invalid api', 'invalid key',
+  'missing key', 'unauthorized', 'exceeded', 'run out',
+];
+
+function isFallbackError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return FALLBACK_TRIGGERS.some((trigger) => msg.includes(trigger));
+}
+
+async function fetchFromSerper(
+  keyword: string,
+  country: CountryCode = 'in',
+  device: DeviceType = 'desktop',
+): Promise<{ results: SerpSearchResult[]; status: number | null }> {
+  const apiKey = process.env.SERPER_API_KEY ?? '';
+  if (!apiKey) throw new Error('Missing SERPER_API_KEY environment variable');
+
+  console.debug('[serp] Using Serper');
+
+  const PAGES = [1, 2, 3]; // Serper uses 1-based page numbers
+  let lastStatus: number | null = null;
+  const allResults: SerpSearchResult[] = [];
+
+  for (const page of PAGES) {
+    console.debug(`[serp] Fetching Serper page=${page} for "${keyword}"`);
+
+    const res = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: keyword, gl: country, num: 10, page, device }),
+    });
+
+    lastStatus = res.status;
+    console.debug(`[serp] Serper response status page=${page}:`, res.status);
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      const errorMessage = data.message || data.error || `Serper returned status ${res.status}`;
+      throw new Error(`Serper error for "${keyword}" (page=${page}): ${errorMessage}`);
+    }
+
+    const organic: any[] = data.organic || [];
+    console.debug(`[serp] Serper page=${page} returned ${organic.length} results for "${keyword}"`);
+
+    if (organic.length === 0) {
+      console.debug(`[serp] Serper empty page=${page} for "${keyword}", stopping early`);
+      break;
+    }
+
+    const startOffset = (page - 1) * 10;
+    const mapped: SerpSearchResult[] = organic.map((item: any, index: number) => ({
+      position: item.position ?? startOffset + index + 1,
+      title: item.title || '',
+      displayedUrl: item.displayedLink || item.link || '',
+      link: item.link || '',
+    }));
+
+    allResults.push(...mapped);
+  }
+
+  console.debug(`[serp] Serper total merged results for "${keyword}":`, allResults.length);
+  console.debug(`[serp] Serper first position for "${keyword}":`, allResults[0]?.position ?? 'n/a');
+  console.debug(`[serp] Serper last  position for "${keyword}":`, allResults[allResults.length - 1]?.position ?? 'n/a');
+
+  return { results: allResults, status: lastStatus };
+}
+
 export async function fetchSerpResults(
   keyword: string,
   engine: string = 'google',
@@ -34,12 +106,15 @@ export async function fetchSerpResults(
   device: DeviceType = 'desktop',
 ): Promise<{ results: SerpSearchResult[]; status?: number | null }> {
   const apiKey = process.env.SERP_API_KEY ?? '';
-  const hasKey = Boolean(apiKey);
-  console.debug('[serp] SERP_API_KEY present:', hasKey);
+  console.debug('[serp] SERP_API_KEY present:', Boolean(apiKey));
 
   if (!apiKey) {
-    throw new Error('Missing SERP_API_KEY environment variable');
+    console.debug('[serp] SERP_API_KEY missing — falling back to Serper immediately');
+    console.debug('[serp] Falling back to Serper');
+    return fetchFromSerper(keyword, country, device);
   }
+
+  console.debug('[serp] Using SerpApi');
 
   let countryParam = engine === 'google' ? `gl=${country}` : `cc=${country}`;
   if (engine === 'google' && country === 'ae') {
@@ -48,7 +123,7 @@ export async function fetchSerpResults(
 
   const PAGES = [0, 10, 20]; // start offsets covering positions 1–30
   let lastStatus: number | null = null;
-  const allRaw: any[] = [];
+  const allRaw: SerpSearchResult[] = [];
 
   try {
     for (const start of PAGES) {
@@ -88,9 +163,13 @@ export async function fetchSerpResults(
     console.debug(`[serp] First position for "${keyword}":`, allRaw[0]?.position ?? 'n/a');
     console.debug(`[serp] Last  position for "${keyword}":`, allRaw[allRaw.length - 1]?.position ?? 'n/a');
 
-    return { results: allRaw as SerpSearchResult[], status: lastStatus };
+    return { results: allRaw, status: lastStatus };
   } catch (error) {
     console.error(`[serp] Error fetching SerpApi for "${keyword}":`, error);
+    if (isFallbackError(error)) {
+      console.debug('[serp] Falling back to Serper');
+      return fetchFromSerper(keyword, country, device);
+    }
     throw error;
   }
 }
