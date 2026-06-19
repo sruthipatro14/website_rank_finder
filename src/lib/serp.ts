@@ -74,21 +74,21 @@ export async function fetchSerpResults(
         break;
       }
 
-      allRaw.push(...pageOrganic);
+      const mappedPage: SerpSearchResult[] = pageOrganic.map((item: any, index: number) => ({
+        position: item.position ?? start + index + 1,
+        title: item.title || item.snippet || '',
+        displayedUrl: item.displayed_link || item.domain || '',
+        link: item.link || item.url || '',
+      }));
+
+      allRaw.push(...mappedPage);
     }
 
     console.debug(`[serp] Total merged organic results for "${keyword}":`, allRaw.length);
     console.debug(`[serp] First position for "${keyword}":`, allRaw[0]?.position ?? 'n/a');
     console.debug(`[serp] Last  position for "${keyword}":`, allRaw[allRaw.length - 1]?.position ?? 'n/a');
 
-    const mappedResults: SerpSearchResult[] = allRaw.map((item: any) => ({
-      position: item.position,
-      title: item.title || item.snippet || '',
-      displayedUrl: item.displayed_link || item.domain || '',
-      link: item.link || item.url || '',
-    }));
-
-    return { results: mappedResults, status: lastStatus };
+    return { results: allRaw as SerpSearchResult[], status: lastStatus };
   } catch (error) {
     console.error(`[serp] Error fetching SerpApi for "${keyword}":`, error);
     throw error;
