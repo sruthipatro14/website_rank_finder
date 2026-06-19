@@ -50,22 +50,21 @@ async function fetchFromSerper(
 
   console.debug('[serp] Using Serper');
 
-  const PAGES = [1, 2, 3]; // Serper uses 1-based page numbers
+  const PAGES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // pages covering positions 1–100
   let lastStatus: number | null = null;
   const allResults: SerpSearchResult[] = [];
 
   for (const page of PAGES) {
-    console.debug(`[serp] Fetching Serper page=${page} for "${keyword}"`);
+    const payload = { q: keyword, gl: country, num: 10, page, device };
+    console.debug(`[serper] Fetching page=${page} payload=${JSON.stringify(payload)}`);
 
     const res = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: keyword, gl: country, num: 10, page, device }),
+      body: JSON.stringify(payload),
     });
 
     lastStatus = res.status;
-    console.debug(`[serp] Serper response status page=${page}:`, res.status);
-
     const data = await res.json();
 
     if (!res.ok) {
@@ -74,27 +73,33 @@ async function fetchFromSerper(
     }
 
     const organic: any[] = data.organic || [];
-    console.debug(`[serp] Serper page=${page} returned ${organic.length} results for "${keyword}"`);
+    console.debug(`[serper] page=${page} organic_results=${organic.length}`);
 
     if (organic.length === 0) {
-      console.debug(`[serp] Serper empty page=${page} for "${keyword}", stopping early`);
+      console.debug(`[serper] page=${page} returned 0 results — Serper has no more data for this query, stopping`);
       break;
     }
 
     const startOffset = (page - 1) * 10;
     const mapped: SerpSearchResult[] = organic.map((item: any, index: number) => ({
-      position: item.position ?? startOffset + index + 1,
+      position: startOffset + index + 1,
       title: item.title || '',
       displayedUrl: item.displayedLink || item.link || '',
       link: item.link || '',
     }));
 
+    const firstPos = mapped[0].position;
+    const lastPos = mapped[mapped.length - 1].position;
+    console.debug(`[serper] firstPosition=${firstPos} lastPosition=${lastPos}`);
+
     allResults.push(...mapped);
   }
 
-  console.debug(`[serp] Serper total merged results for "${keyword}":`, allResults.length);
-  console.debug(`[serp] Serper first position for "${keyword}":`, allResults[0]?.position ?? 'n/a');
-  console.debug(`[serp] Serper last  position for "${keyword}":`, allResults[allResults.length - 1]?.position ?? 'n/a');
+  console.debug(`[serper] Total pages requested: ${PAGES.length}`);
+  console.debug(`[serper] Total results received: ${allResults.length}`);
+  console.debug(`[serper] First position: ${allResults[0]?.position ?? 'n/a'}`);
+  console.debug(`[serper] Last  position: ${allResults[allResults.length - 1]?.position ?? 'n/a'}`);
+  console.debug(`[serper] All positions: ${allResults.map((r) => r.position).join(', ')}`);
 
   return { results: allResults, status: lastStatus };
 }
@@ -121,7 +126,7 @@ export async function fetchSerpResults(
     countryParam += '&hl=en';
   }
 
-  const PAGES = [0, 10, 20]; // start offsets covering positions 1–30
+  const PAGES = [0, 10, 20, 30, 40]; // start offsets covering positions 1–30
   let lastStatus: number | null = null;
   const allRaw: SerpSearchResult[] = [];
 
@@ -145,16 +150,20 @@ export async function fetchSerpResults(
       console.debug(`[serp] Page start=${start} returned ${pageOrganic.length} results for "${keyword}"`);
 
       if (pageOrganic.length === 0) {
-        console.debug(`[serp] Empty page at start=${start} for "${keyword}", stopping early`);
-        break;
+        console.debug(`[serp] Empty page at start=${start} for "${keyword}", skipping`);
+        continue;
       }
 
-      const mappedPage: SerpSearchResult[] = pageOrganic.map((item: any, index: number) => ({
-        position: item.position ?? start + index + 1,
-        title: item.title || item.snippet || '',
-        displayedUrl: item.displayed_link || item.domain || '',
-        link: item.link || item.url || '',
-      }));
+      const mappedPage: SerpSearchResult[] = pageOrganic.map((item: any, index: number) => {
+        const calculatedPosition = start + index + 1;
+        console.debug(`[serp] start=${start} index=${index} calculatedPosition=${calculatedPosition}`);
+        return {
+          position: calculatedPosition,
+          title: item.title || item.snippet || '',
+          displayedUrl: item.displayed_link || item.domain || '',
+          link: item.link || item.url || '',
+        };
+      });
 
       allRaw.push(...mappedPage);
     }
@@ -162,6 +171,7 @@ export async function fetchSerpResults(
     console.debug(`[serp] Total merged organic results for "${keyword}":`, allRaw.length);
     console.debug(`[serp] First position for "${keyword}":`, allRaw[0]?.position ?? 'n/a');
     console.debug(`[serp] Last  position for "${keyword}":`, allRaw[allRaw.length - 1]?.position ?? 'n/a');
+    console.debug(`[serp] All positions for "${keyword}":`, allRaw.map((r) => r.position).join(', '));
 
     return { results: allRaw, status: lastStatus };
   } catch (error) {
@@ -206,6 +216,7 @@ export async function checkKeywordRanking(
   const found = sorted.find((result) => isDomainMatch(result.link, targetDomain));
 
   if (!found) {
+    console.debug(`[serp:match] No match found for target="${targetDomain}" keyword="${keyword}"`);
     return {
       result: {
         keyword,
@@ -220,6 +231,8 @@ export async function checkKeywordRanking(
   }
 
   const rank = found.position;
+  console.debug(`[serp:match] Match found for target="${targetDomain}" keyword="${keyword}" matchedUrl="${found.link}" rank=${rank}`);
+  console.debug(`[serp:match] Final rank returned: ${rank}`);
   return {
     result: {
       keyword,
