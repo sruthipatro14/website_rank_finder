@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
+import * as XLSX from 'xlsx';
 import RankTable from './RankTable';
 import type { RankResult, CountryCode, DeviceType } from '@/types';
 
@@ -35,6 +37,36 @@ const COUNTRY_OPTIONS = [
   { label: 'New Zealand', value: 'nz' },
 ];
 
+const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024;
+
+type ImportCellValue = string | number | boolean | Date | null | undefined;
+
+interface ImportStats {
+  totalRows: number;
+  importedKeywords: number;
+  skippedRows: number;
+}
+
+interface ParsedImportSheet {
+  fileName: string;
+  headers: string[];
+  rows: ImportCellValue[][];
+  totalRows: number;
+}
+
+const getImportCellText = (value: ImportCellValue): string => {
+  if (value instanceof Date) {
+    return value.toISOString().split('T')[0];
+  }
+
+  return value === null || value === undefined ? '' : String(value).trim();
+};
+
+const getColumnLabel = (value: ImportCellValue, index: number): string => {
+  const label = getImportCellText(value);
+  return label || `Column ${index + 1}`;
+};
+
 export default function HomePage() {
   const [url, setUrl] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -47,8 +79,131 @@ export default function HomePage() {
   const [searchedCountry, setSearchedCountry] = useState<CountryCode | null>(null);
   const [searchedDevice, setSearchedDevice] = useState<DeviceType | null>(null);
   const [error, setError] = useState('');
+  const [importSheet, setImportSheet] = useState<ParsedImportSheet | null>(null);
+  const [selectedImportColumn, setSelectedImportColumn] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importStats, setImportStats] = useState<ImportStats | null>(null);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const selectedColumnIndex = selectedImportColumn === '' ? -1 : Number(selectedImportColumn);
+
+  const selectedColumnSamples = useMemo(() => {
+    if (!importSheet || selectedColumnIndex < 0) {
+      return [];
+    }
+
+    return importSheet.rows
+      .map((row) => getImportCellText(row[selectedColumnIndex]))
+      .filter(Boolean)
+      .slice(0, 5);
+  }, [importSheet, selectedColumnIndex]);
+
+  const handleImportFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    setImportError('');
+    setImportStats(null);
+    setImportSheet(null);
+    setSelectedImportColumn('');
+
+    if (!file) {
+      return;
+    }
+
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const allowedExtensions = new Set(['xlsx', 'xls', 'csv']);
+
+    if (!extension || !allowedExtensions.has(extension)) {
+      setImportError('Please upload a .xlsx, .xls, or .csv file.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size >= MAX_IMPORT_FILE_SIZE) {
+      setImportError('Please upload a file smaller than 10 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setImportLoading(true);
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), {
+        type: 'array',
+        cellDates: true,
+      });
+      const firstSheetName = workbook.SheetNames[0];
+
+      if (!firstSheetName) {
+        setImportError('No sheets were found in this file.');
+        return;
+      }
+
+      const worksheet = workbook.Sheets[firstSheetName];
+      const sheetRows = XLSX.utils.sheet_to_json<ImportCellValue[]>(worksheet, {
+        header: 1,
+        blankrows: false,
+        defval: '',
+      });
+      const [headerRow, ...dataRows] = sheetRows;
+
+      if (!headerRow || headerRow.length === 0) {
+        setImportError('No column headers were found in the first row.');
+        return;
+      }
+
+      const columnCount = Math.max(
+        headerRow.length,
+        ...dataRows.map((row) => row.length),
+      );
+      const headers = Array.from({ length: columnCount }, (_, index) => getColumnLabel(headerRow[index], index));
+
+      setImportSheet({
+        fileName: file.name,
+        headers,
+        rows: dataRows,
+        totalRows: dataRows.length,
+      });
+    } catch (err) {
+      console.error('[client] Import parse error:', err);
+      setImportError('Could not read this file. Please check the format and try again.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportKeywords = () => {
+    if (!importSheet || selectedColumnIndex < 0) {
+      setImportError('Please select the column that contains keywords.');
+      return;
+    }
+
+    const seenKeywords = new Set<string>();
+    const importedKeywords: string[] = [];
+
+    importSheet.rows.forEach((row) => {
+      const keyword = getImportCellText(row[selectedColumnIndex]);
+
+      if (!keyword || seenKeywords.has(keyword.toLowerCase())) {
+        return;
+      }
+
+      seenKeywords.add(keyword.toLowerCase());
+      importedKeywords.push(keyword);
+    });
+
+    const skippedRows = Math.max(importSheet.totalRows - importedKeywords.length, 0);
+
+    setKeywords(importedKeywords.join('\n'));
+    setImportStats({
+      totalRows: importSheet.totalRows,
+      importedKeywords: importedKeywords.length,
+      skippedRows,
+    });
+    setImportError('');
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setResults([]);
@@ -244,6 +399,138 @@ export default function HomePage() {
                   placeholder="example.com"
                   className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
                 />
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Import keywords from file</p>
+                    <p className="mt-1 text-sm text-slate-600">Upload File -&gt; Select Column -&gt; Preview Values -&gt; Import Keywords</p>
+                  </div>
+                  {importSheet ? (
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                      {importSheet.totalRows} row{importSheet.totalRows === 1 ? '' : 's'}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-5 space-y-5">
+                  <div>
+                    <label htmlFor="keyword-import-file" className="mb-2 block text-sm font-semibold text-slate-700">
+                      Upload File
+                    </label>
+                    <input
+                      id="keyword-import-file"
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleImportFileChange}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">Supports .xlsx, .xls, and .csv files under 10 MB.</p>
+                  </div>
+
+                  {importLoading ? (
+                    <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                      Reading file...
+                    </div>
+                  ) : null}
+
+                  {importSheet ? (
+                    <div className="space-y-5">
+                      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 sm:grid-cols-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">File</p>
+                          <p className="mt-1 break-words">{importSheet.fileName}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">Columns detected</p>
+                          <p className="mt-1">{importSheet.headers.length}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">Total rows found</p>
+                          <p className="mt-1">{importSheet.totalRows}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="keyword-import-column" className="mb-2 block text-sm font-semibold text-slate-700">
+                          Select Column
+                        </label>
+                        <select
+                          id="keyword-import-column"
+                          value={selectedImportColumn}
+                          onChange={(event) => {
+                            setSelectedImportColumn(event.target.value);
+                            setImportStats(null);
+                            setImportError('');
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                        >
+                          <option value="">Choose a column</option>
+                          {importSheet.headers.map((header, index) => (
+                            <option key={`${header}-${index}`} value={index}>
+                              {header}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {selectedImportColumn !== '' ? (
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-semibold text-slate-900">Preview Values</p>
+                            <p className="text-xs text-slate-500">First 5 non-empty values</p>
+                          </div>
+                          {selectedColumnSamples.length > 0 ? (
+                            <ul className="mt-3 space-y-2">
+                              {selectedColumnSamples.map((sample, index) => (
+                                <li key={`${sample}-${index}`} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                  {sample}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                              No non-empty sample values found in this column.
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={handleImportKeywords}
+                        disabled={selectedImportColumn === ''}
+                        className="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        Import Keywords
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {importStats ? (
+                    <div className="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 sm:grid-cols-3">
+                      <div>
+                        <p className="font-semibold">Total rows found</p>
+                        <p className="mt-1">{importStats.totalRows}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold">Total keywords imported</p>
+                        <p className="mt-1">{importStats.importedKeywords}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold">Total skipped rows</p>
+                        <p className="mt-1">{importStats.skippedRows}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {importError ? (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {importError}
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div>

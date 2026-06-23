@@ -10,6 +10,47 @@ interface CheckRankPayload {
   device?: DeviceType;
 }
 
+const KEYWORD_CONCURRENCY_LIMIT = 2;
+
+type KeywordCheck = Awaited<ReturnType<typeof checkKeywordRanking>>;
+
+async function runKeywordChecksWithLimit(
+  keywords: string[],
+  limit: number,
+  checkKeyword: (keyword: string) => Promise<KeywordCheck>,
+): Promise<KeywordCheck[]> {
+  const results: KeywordCheck[] = new Array(keywords.length);
+  let nextIndex = 0;
+  let activeRequests = 0;
+
+  const runWorker = async () => {
+    while (nextIndex < keywords.length) {
+      const currentIndex = nextIndex;
+      const keyword = keywords[currentIndex];
+      nextIndex += 1;
+      activeRequests += 1;
+
+      console.debug(
+        `[api/check-rank:queue] Starting keyword="${keyword}" active=${activeRequests} queued=${keywords.length - nextIndex}`,
+      );
+
+      try {
+        results[currentIndex] = await checkKeyword(keyword);
+      } finally {
+        activeRequests -= 1;
+        console.debug(
+          `[api/check-rank:queue] Finished keyword="${keyword}" active=${activeRequests} queued=${keywords.length - nextIndex}`,
+        );
+      }
+    }
+  };
+
+  const workerCount = Math.min(limit, keywords.length);
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+
+  return results;
+}
+
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as CheckRankPayload;
@@ -47,9 +88,13 @@ export async function POST(request: Request) {
     const device = payload.device || 'desktop';
     console.debug('[api/check-rank] Selected device:', device);
 
-    // Run keyword checks concurrently and gather serp statuses for debugging
-    const checks = await Promise.all(
-      keywords.map((keyword) => checkKeywordRanking(targetDomain, keyword, engine, country, device))
+    console.debug(
+      `[api/check-rank:queue] Processing ${keywords.length} keyword(s) with concurrency=${KEYWORD_CONCURRENCY_LIMIT}`,
+    );
+    const checks = await runKeywordChecksWithLimit(
+      keywords,
+      KEYWORD_CONCURRENCY_LIMIT,
+      (keyword) => checkKeywordRanking(targetDomain, keyword, engine, country, device),
     );
 
     const results: RankResult[] = checks.map((c) => c.result);
