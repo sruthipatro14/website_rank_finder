@@ -40,6 +40,32 @@ function isFallbackError(error: unknown): boolean {
   return FALLBACK_TRIGGERS.some((trigger) => msg.includes(trigger));
 }
 
+const SERPER_MAX_ATTEMPTS = 4;
+
+async function serperFetch(
+  payload: object,
+  apiKey: string,
+  keyword: string,
+  page: number,
+): Promise<{ res: Response; data: any }> {
+  let delayMs = 1000;
+  for (let attempt = 1; attempt <= SERPER_MAX_ATTEMPTS; attempt++) {
+    const res = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (res.status !== 429) return { res, data };
+    if (attempt < SERPER_MAX_ATTEMPTS) {
+      console.debug(`[serper] Rate limited keyword="${keyword}" page=${page} attempt=${attempt}/${SERPER_MAX_ATTEMPTS} retrying in ${delayMs}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      delayMs *= 2; // exponential backoff: 1s → 2s → 4s
+    }
+  }
+  throw new Error(`Serper rate limit not resolved for "${keyword}" page=${page} after ${SERPER_MAX_ATTEMPTS} attempts`);
+}
+
 async function fetchFromSerper(
   keyword: string,
   country: CountryCode = 'in',
@@ -51,21 +77,20 @@ async function fetchFromSerper(
   console.debug('[serp] Using Serper');
 
   const PAGES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // pages covering positions 1–100
+  const DELAY_MS = 500; // 500ms between pages = max 2 req/sec per keyword
   let lastStatus: number | null = null;
   const allResults: SerpSearchResult[] = [];
 
   for (const page of PAGES) {
+    if (page > 1) await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+
     const payload = { q: keyword, gl: country, num: 10, page, device };
     console.debug(`[serper] Fetching page=${page} payload=${JSON.stringify(payload)}`);
 
-    const res = await fetch('https://google.serper.dev/search', {
-      method: 'POST',
-      headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
+    let res: Response;
+    let data: any;
+    ({ res, data } = await serperFetch(payload, apiKey, keyword, page));
     lastStatus = res.status;
-    const data = await res.json();
 
     if (!res.ok) {
       const errorMessage = data.message || data.error || `Serper returned status ${res.status}`;
