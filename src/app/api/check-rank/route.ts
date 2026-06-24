@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDomain, checkKeywordRanking } from '@/lib/serp';
 import type { RankResult, CountryCode, DeviceType } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface CheckRankPayload {
   url: string;
@@ -98,6 +99,38 @@ export async function POST(request: Request) {
     );
 
     const results: RankResult[] = checks.map((c) => c.result);
+    const { data: scan, error: scanError } = await supabase
+  .from('scans')
+  .insert({
+    website: targetDomain,
+    country,
+    device,
+  })
+  .select()
+  .single();
+
+if (scanError) {
+  console.error('Failed to create scan:', scanError);
+}
+
+if (scan) {
+  const rankingRows = results.map((r) => ({
+    scan_id: scan.id,
+    keyword: r.keyword,
+    rank: r.rank,
+    ranking_url: r.rankingUrl || null,
+    page: r.page || null,
+    position_on_page: r.positionOnPage || null,
+  }));
+
+  const { error } = await supabase
+    .from('ranking_results')
+    .insert(rankingRows);
+
+  if (error) {
+    console.error('Failed to save rankings:', error);
+  }
+}
     const serpStatuses: Record<string, number | null | undefined> = {};
     checks.forEach((c) => {
       serpStatuses[c.result.keyword] = c.serpStatus ?? null;

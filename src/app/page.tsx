@@ -5,7 +5,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import * as XLSX from 'xlsx';
 import RankTable from './RankTable';
 import type { RankResult, CountryCode, DeviceType } from '@/types';
-
+import Link from 'next/link';
 interface ApiResponse {
   results?: RankResult[];
   error?: string;
@@ -322,6 +322,21 @@ export default function HomePage() {
     <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <header className="rounded-[2rem] border border-slate-200 bg-white/90 px-8 py-10 shadow-xl shadow-slate-200/50 backdrop-blur-lg">
+          <div className="mb-6 flex gap-4">
+  <Link
+    href="/history"
+    className="rounded-xl bg-slate-900 px-4 py-2 text-white hover:bg-slate-800"
+  >
+    History
+  </Link>
+
+  <Link
+    href="/analytics"
+     className="rounded-xl bg-slate-900 px-4 py-2 text-white hover:bg-slate-800"
+  >
+    Analytics
+  </Link>
+</div>
           <div className="max-w-3xl">
             <p className="mb-4 inline-flex rounded-full bg-sky-100 px-4 py-1 text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
               SERP Rank Tracker
@@ -620,5 +635,7 @@ export default function HomePage() {
         ) : null}
       </div>
     </main>
+
+    
   );
 }
