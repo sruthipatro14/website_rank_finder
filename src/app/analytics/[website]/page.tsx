@@ -94,6 +94,11 @@ export default async function WebsiteAnalyticsPage({
     .sort((a, b) => a.change - b.change)
     .slice(0, 10);
 
+  const { data: audits } = await supabase
+    .from('website_audits')
+    .select('*')
+    .eq('website', website);
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-4xl font-bold mb-2">{website}</h1>
@@ -248,22 +253,24 @@ export default async function WebsiteAnalyticsPage({
 
         
           <AIRecommendations
-           website={website}
-           top10={top10}
-           top20={top20}
-           avgRank={avgRank}
-           changes={changes}
-/>
+            website={website}
+            top10={top10}
+            top20={top20}
+            avgRank={avgRank}
+            changes={changes}
+             audits={audits || []}
+          />
         
       </div>
 
       <div className="mt-8">
       <AIChat
-    website={website}
-    rankings={rankings}
-    changes={changes}
-    scans={scans}
-  />
+        website={website}
+        rankings={rankings}
+        changes={changes}
+        scans={scans}
+        audits={audits || []}
+      />
     </div>
     </div>
   );

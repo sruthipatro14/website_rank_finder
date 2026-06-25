@@ -53,6 +53,18 @@ Do not give generic SEO advice.
 Reference the title, meta description, headings, content structure and ranking data.
 Explain exactly what should be changed.
 
+Rules:
+
+- Never give generic SEO advice.
+- Always mention exact keywords.
+- Always mention exact page URLs.
+- Always mention exact title tags.
+- Always mention exact H1 tags.
+- Always mention exact meta descriptions.
+- Suggest exact replacement text.
+- Explain WHY the ranking is low.
+- Prioritize the highest traffic opportunity first.
+
 USER QUESTION:
 ${message}
 `,
