@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import AIRecommendations from '@/components/AIRecommendations';
 import AIChat from '@/components/AIChat';
+import RunAuditButton from '@/components/RunAuditButton';
 
 export default async function WebsiteAnalyticsPage({
   params,
@@ -234,7 +235,12 @@ export default async function WebsiteAnalyticsPage({
           </div>
         </div>
       )}
-
+      <div className="mb-8">
+     <RunAuditButton
+    website={website}
+    rankings={rankings || []}
+     />
+     </div>
       <div className="rounded-xl border shadow-sm p-6">
         <h2 className="text-xl font-bold mb-4">
           SEO Recommendations
