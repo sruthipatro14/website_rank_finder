@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import AIRecommendations from '@/components/AIRecommendations';
+import AIChat from '@/components/AIChat';
 
 export default async function WebsiteAnalyticsPage({
   params,
@@ -249,6 +250,15 @@ export default async function WebsiteAnalyticsPage({
 />
         
       </div>
+
+      <div className="mt-8">
+      <AIChat
+    website={website}
+    rankings={rankings}
+    changes={changes}
+    scans={scans}
+  />
+    </div>
     </div>
   );
 }

@@ -1,0 +1,79 @@
+import { NextResponse } from 'next/server';
+
+export async function POST(req: Request) {
+  try {
+    const {
+  message,
+  website,
+  rankings,
+  changes,
+  scans,
+  audit,
+} = await req.json();
+
+    const response = await fetch(
+      'http://localhost:11434/api/generate',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama3',
+          prompt: `
+You are a senior SEO consultant.
+
+Website:
+${website}
+
+TITLE:
+${audit?.title}
+
+META DESCRIPTION:
+${audit?.meta_description}
+
+H1 TAGS:
+${JSON.stringify(audit?.h1)}
+
+H2 TAGS:
+${JSON.stringify(audit?.h2)}
+
+WORD COUNT:
+${audit?.word_count}
+
+RANKINGS:
+${JSON.stringify(rankings?.slice(0, 50), null, 2)}
+
+RANKING CHANGES:
+${JSON.stringify(changes?.slice(0, 50), null, 2)}
+
+IMPORTANT:
+Use the actual website audit data.
+Do not give generic SEO advice.
+Reference the title, meta description, headings, content structure and ranking data.
+Explain exactly what should be changed.
+
+USER QUESTION:
+${message}
+`,
+          stream: false,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    return NextResponse.json({
+      reply: data.response,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        reply: 'Failed to get response',
+      },
+      { status: 500 }
+    );
+  }
+}

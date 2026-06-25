@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+
+
 export default async function AnalyticsPage() {
   const { data: scans, error } = await supabase
     .from('scans')
