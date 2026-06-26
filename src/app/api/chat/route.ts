@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   rankings,
   changes,
   scans,
-  audit,
+  audits,
 } = await req.json();
 
     const response = await fetch(
@@ -27,19 +27,19 @@ Website:
 ${website}
 
 TITLE:
-${audit?.title}
+${audits?.title}
 
 META DESCRIPTION:
-${audit?.meta_description}
+${audits?.meta_description}
 
 H1 TAGS:
-${JSON.stringify(audit?.h1)}
+${JSON.stringify(audits?.h1)}
 
 H2 TAGS:
-${JSON.stringify(audit?.h2)}
+${JSON.stringify(audits?.h2)}
 
 WORD COUNT:
-${audit?.word_count}
+${audits?.word_count}
 
 RANKINGS:
 ${JSON.stringify(rankings?.slice(0, 50), null, 2)}

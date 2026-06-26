@@ -7,7 +7,7 @@ interface AIChatProps {
   rankings: any[];
   changes: any[];
   scans: any[];
-  
+  audits: any[];
 }
 
 export default function AIChat({
@@ -15,7 +15,7 @@ export default function AIChat({
   rankings,
   changes,
   scans,
-  audit,
+  audits,
 }: AIChatProps) {
   const [message, setMessage] = useState('');
   const [reply, setReply] = useState('');
@@ -38,7 +38,7 @@ export default function AIChat({
           rankings,
           changes,
           scans,
-          audit,
+          audits,
         }),
       });
 
