@@ -253,13 +253,14 @@ export default async function WebsiteAnalyticsPage({
 
         
           <AIRecommendations
-            website={website}
-            top10={top10}
-            top20={top20}
-            avgRank={avgRank}
-            changes={changes}
-             audits={audits || []}
-          />
+  website={website}
+  rankings={rankings || []}
+  changes={changes}
+  audits={audits || []}
+  top10={top10}
+  top20={top20}
+  avgRank={avgRank}
+/>
         
       </div>
 
