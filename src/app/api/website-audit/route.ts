@@ -90,10 +90,26 @@ export async function POST(req: Request) {
 const psiRes = await fetch(
   `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
     pageUrl
-  )}&strategy=mobile&key=${process.env.PAGESPEED_API_KEY}`
+  )}&strategy=mobile&category=PERFORMANCE&category=SEO&category=ACCESSIBILITY&key=${process.env.PAGESPEED_API_KEY}`
 );
 
 const psi = await psiRes.json();
+
+console.log(
+  'CATEGORY KEYS:',
+  Object.keys(
+    psi?.lighthouseResult?.categories || {}
+  )
+);
+
+console.log(
+  'CATEGORIES OBJECT:',
+  JSON.stringify(
+    psi?.lighthouseResult?.categories,
+    null,
+    2
+  )
+);
 
 console.log(
   'LIGHTHOUSE EXISTS:',
@@ -114,34 +130,53 @@ console.log(
   )
 );
 
-const categories =
-  psi?.lighthouseResult?.categories || {};
+const lighthouse = psi?.lighthouseResult;
 
-const audits =
-  psi?.lighthouseResult?.audits || {};
+const categories = lighthouse?.categories ?? {};
+console.log('PERFORMANCE SCORE:', categories.performance?.score);
+console.log('SEO SCORE:', categories.seo?.score);
+console.log('ACCESSIBILITY SCORE:', categories.accessibility?.score);
+const audits = lighthouse?.audits ?? {};
+
+console.log(
+  'FULL PSI RESPONSE:',
+  JSON.stringify(psi, null, 2)
+);
 
 const pagespeedScore =
-  categories.performance?.score != null
-    ? Math.round(categories.performance.score * 100)
-    : null;
+typeof categories.performance?.score === 'number'
+  ? Math.round(categories.performance.score * 100)
+  : null;
 
 const seoScore =
-  categories.seo?.score != null
-    ? Math.round(categories.seo.score * 100)
-    : null;
+typeof categories.seo?.score === 'number'
+  ? Math.round(categories.seo.score * 100)
+  : null;
 
 const accessibilityScore =
-  categories.accessibility?.score != null
-    ? Math.round(categories.accessibility.score * 100)
-    : null;
+typeof categories.accessibility?.score === 'number'
+  ? Math.round(categories.accessibility.score * 100)
+  : null;
+
 const lcp =
-  audits['largest-contentful-paint']?.numericValue || null;
+audits['largest-contentful-paint']?.numericValue ?? null;
 
 const cls =
-  audits['cumulative-layout-shift']?.numericValue || null;
+audits['cumulative-layout-shift']?.numericValue ?? null;
 
 const inp =
-  audits['interaction-to-next-paint']?.numericValue || null;
+audits['interaction-to-next-paint']?.numericValue ??
+audits['experimental-interaction-to-next-paint']?.numericValue ??
+null;
+
+console.log({
+  pagespeedScore,
+  seoScore,
+  accessibilityScore,
+  lcp,
+  cls,
+  inp,
+});
     // CONTENT
     const content = $('body')
       .text()
