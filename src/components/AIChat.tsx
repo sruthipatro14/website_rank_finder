@@ -43,6 +43,7 @@ export default function AIChat({
       });
 
       const data = await response.json();
+      
 
       setReply(data.reply);
     } catch (error) {

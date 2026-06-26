@@ -3,13 +3,201 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const {
-  message,
-  website,
-  rankings,
-  changes,
-  scans,
-  audits,
-} = await req.json();
+      message,
+      website,
+      rankings = [],
+      changes = [],
+      scans = [],
+      audits = [],
+    } = await req.json();
+
+    console.log('AUDITS RECEIVED:', audits?.length);
+    console.log('FIRST AUDIT:', audits?.[0]);
+
+    const auditContext = Array.isArray(audits)
+      ? audits
+          .map(
+            (audit) => `
+KEYWORD:
+${audit.keyword}
+
+PAGE URL:
+${audit.page_url}
+
+TITLE:
+${audit.title}
+
+META DESCRIPTION:
+${audit.meta_description}
+
+H1:
+${JSON.stringify(audit.h1)}
+
+H2:
+${JSON.stringify(audit.h2)}
+
+WORD COUNT:
+${audit.word_count}
+
+IMAGES:
+${audit.images}
+
+LINKS:
+${audit.links}
+
+CONTENT:
+${audit.content?.slice(0, 2000) || ''}
+`
+          )
+          .join('\n\n==============================\n\n')
+      : '';
+
+    const prompt = `
+You are a senior SEO consultant.
+
+WEBSITE:
+${website}
+
+AUDIT DATA:
+${auditContext}
+
+RANKINGS:
+${JSON.stringify(rankings, null, 2)}
+
+RANKING CHANGES:
+${JSON.stringify(changes, null, 2)}
+
+SCAN DATA:
+${JSON.stringify(scans, null, 2)}
+
+==================================================
+RULES
+==================================================
+
+1. ONLY use information found in:
+   - Audit Data
+   - Ranking Data
+   - Ranking Changes
+   - Scan Data
+
+2. NEVER invent:
+   - Title tags
+   - Meta descriptions
+   - H1 tags
+   - H2 tags
+   - URLs
+   - Rankings
+   - Word counts
+
+3. If information does not exist in the audit:
+   Reply:
+   "That information is not available in the audit."
+
+4. If answering about a specific page:
+   Find the matching audit record and answer only from that page.
+
+5. Always quote actual values before giving recommendations.
+
+6. Use ranking data as evidence.
+
+7. A low ranking does NOT automatically mean:
+   - title is bad
+   - H1 is bad
+   - meta description is bad
+
+8. Do NOT create fake SEO problems.
+
+9. If no issue is visible in the audit:
+   Say:
+   "No issue detected in the audit data."
+
+10. If a recommendation is made:
+    Explain exactly WHY using audit data or ranking data.
+
+==================================================
+HOW TO ANALYZE
+==================================================
+
+When a user asks for SEO improvements:
+
+Step 1:
+Identify the page and keyword.
+
+Step 2:
+Show:
+
+- Current URL
+- Current Ranking
+- Current Title
+- Current Meta Description
+- Current H1
+- Word Count
+
+Step 3:
+Analyze:
+
+- Missing title?
+- Missing meta description?
+- Missing H1?
+- Missing content?
+- Very low word count?
+- Ranking decline?
+- Large ranking opportunity?
+
+Step 4:
+Only recommend changes if evidence exists.
+
+==================================================
+RESPONSE FORMAT
+==================================================
+
+# Page Overview
+
+URL:
+[actual URL]
+
+Keyword:
+[actual keyword]
+
+Current Rank:
+[actual rank]
+
+Title:
+[actual title]
+
+Meta Description:
+[actual meta]
+
+H1:
+[actual h1]
+
+Word Count:
+[actual word count]
+
+# Findings
+
+[List only proven findings]
+
+# Opportunities
+
+[List opportunities supported by data]
+
+# Recommended Actions
+
+[List recommendations supported by audit data]
+
+If no issues exist:
+
+"No issue detected in the audit data."
+
+==================================================
+USER QUESTION
+==================================================
+
+${message}
+`;
+    console.log('PROMPT LENGTH:', prompt.length);
+    console.log(prompt.slice(0, 5000));
 
     const response = await fetch(
       'http://localhost:11434/api/generate',
@@ -20,54 +208,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           model: 'llama3',
-          prompt: `
-You are a senior SEO consultant.
-
-Website:
-${website}
-
-TITLE:
-${audits?.title}
-
-META DESCRIPTION:
-${audits?.meta_description}
-
-H1 TAGS:
-${JSON.stringify(audits?.h1)}
-
-H2 TAGS:
-${JSON.stringify(audits?.h2)}
-
-WORD COUNT:
-${audits?.word_count}
-
-RANKINGS:
-${JSON.stringify(rankings?.slice(0, 50), null, 2)}
-
-RANKING CHANGES:
-${JSON.stringify(changes?.slice(0, 50), null, 2)}
-
-IMPORTANT:
-Use the actual website audit data.
-Do not give generic SEO advice.
-Reference the title, meta description, headings, content structure and ranking data.
-Explain exactly what should be changed.
-
-Rules:
-
-- Never give generic SEO advice.
-- Always mention exact keywords.
-- Always mention exact page URLs.
-- Always mention exact title tags.
-- Always mention exact H1 tags.
-- Always mention exact meta descriptions.
-- Suggest exact replacement text.
-- Explain WHY the ranking is low.
-- Prioritize the highest traffic opportunity first.
-
-USER QUESTION:
-${message}
-`,
+          prompt,
           stream: false,
         }),
       }

@@ -27,14 +27,13 @@ export default function AIChatPage() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message,
-        website,
-        top10,
-        avgRank,
-        changes,
-        audits,
-        changes: [],
-      }),
+  message,
+  website,
+  rankings,
+  changes,
+  scans,
+  audits,
+}),
     });
 
     const data = await response.json();
