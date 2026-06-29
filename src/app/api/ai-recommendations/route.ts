@@ -22,8 +22,8 @@ export async function POST(req: Request) {
     } = body;
 
     const auditContext = audits
-      ?.map(
-        (audit: any) => `
+  ?.map(
+    (audit: any) => `
 KEYWORD:
 ${audit.keyword}
 
@@ -45,11 +45,50 @@ ${JSON.stringify(audit.h2)}
 WORD COUNT:
 ${audit.word_count}
 
+IMAGES:
+${audit.images}
+
+LINKS:
+${audit.links}
+
+INTERNAL LINKS:
+${audit.internal_links}
+
+EXTERNAL LINKS:
+${audit.external_links}
+
+MISSING ALT IMAGES:
+${audit.missing_alt_images}
+
+CANONICAL URL:
+${audit.canonical_url}
+
+SCHEMA PRESENT:
+${audit.schema_present}
+
+PAGESPEED SCORE:
+${audit.pagespeed_score}
+
+SEO SCORE:
+${audit.seo_score}
+
+ACCESSIBILITY SCORE:
+${audit.accessibility_score}
+
+LCP:
+${audit.lcp}
+
+CLS:
+${audit.cls}
+
+INP:
+${audit.inp}
+
 CONTENT:
 ${audit.content?.slice(0, 1500) || ''}
 `
-      )
-      .join('\n\n========================\n\n');
+  )
+  .join('\n\n========================\n\n');
 
     const prompt = `
 You are an expert SEO consultant.
@@ -75,8 +114,6 @@ ${JSON.stringify(changes, null, 2)}
 AUDIT DATA:
 ${auditContext}
 
-
-
 TASK:
 
 Analyze the ranking data and audit data together.
@@ -98,11 +135,67 @@ IMPORTANT:
 - Reference exact word counts.
 - Use ranking data when explaining opportunities.
 
+==================================================
+TECHNICAL AUDIT REQUIREMENTS
+==================================================
+
+You MUST analyze:
+
+- pagespeed_score
+- seo_score
+- accessibility_score
+- lcp
+- cls
+- inp
+- internal_links
+- external_links
+- missing_alt_images
+- canonical_url
+- schema_present
+- images
+- links
+- word_count
+
+For every recommendation use:
+
+Metric:
+Actual Value:
+Finding:
+Recommendation:
+
+Rules:
+
+- If PageSpeed Score is below 50, flag performance as a priority issue.
+- If LCP is above 2500ms, cite the exact value.
+- If CLS is above 0.1, cite the exact value.
+- If INP is above 200ms, cite the exact value.
+- If Missing Alt Images is greater than 0, cite the exact count.
+- If Schema Present is false, cite that value before recommending schema.
+- If Canonical URL is empty, cite that value before recommending canonical fixes.
+- Do NOT recommend title, H1, or meta description changes unless audit evidence clearly supports it.
+- Always prioritize technical findings before content recommendations.
+
 OUTPUT FORMAT:
 
 # Executive Summary
 
 Brief overview of ranking performance.
+
+# Technical Metrics
+
+For each analyzed page:
+
+URL:
+Keyword:
+PageSpeed Score:
+SEO Score:
+Accessibility Score:
+LCP:
+CLS:
+INP:
+
+Technical Findings:
+(List only findings supported by audit data)
 
 # Top Performing Pages
 
@@ -121,9 +214,11 @@ Only include pages supported by the data.
 URL:
 Keyword:
 Rank:
-Audit Evidence:
-Opportunity:
-Reason:
+
+Metric:
+Actual Value:
+Finding:
+Recommendation:
 
 # Priority Actions
 
