@@ -1,5 +1,33 @@
 import { NextResponse } from 'next/server';
 
+const hasCoreAuditMetrics = (audit: any) =>
+  audit.keyword !== null &&
+  audit.page_url !== null &&
+  audit.internal_links !== null &&
+  audit.external_links !== null &&
+  audit.missing_alt_images !== null &&
+  audit.canonical_url !== null &&
+  audit.schema_present !== null &&
+  audit.pagespeed_score !== null &&
+  audit.seo_score !== null &&
+  audit.accessibility_score !== null &&
+  audit.lcp !== null &&
+  audit.cls !== null;
+
+const latestAuditPerPage = (audits: any[] = []) => {
+  const latest = new Map<string, any>();
+
+  audits.forEach((audit) => {
+    const key = `${audit.keyword || ''}|${audit.page_url || ''}`;
+
+    if (hasCoreAuditMetrics(audit) && !latest.has(key)) {
+      latest.set(key, audit);
+    }
+  });
+
+  return Array.from(latest.values());
+};
+
 export async function GET() {
   return NextResponse.json({
     status: 'working',
@@ -21,8 +49,11 @@ export async function POST(req: Request) {
       avgRank,
     } = body;
 
+    const auditsForPrompt = latestAuditPerPage(
+      Array.isArray(audits) ? audits : []
+    );
     
-    const auditContext = audits
+    const auditContext = auditsForPrompt
   ?.map(
     (audit: any) => `
 KEYWORD:
@@ -102,6 +133,7 @@ ${audit.content?.slice(0, 1500) || ''}
 `
   )
   .join('\n\n========================\n\n');
+
 
     const prompt = `
 You are an expert SEO consultant.
@@ -250,11 +282,20 @@ Reference exact URLs, image sources,
 and missing alt image sources whenever possible.
 
 `;
-console.log('AUDITS RECEIVED:', audits?.length);
+console.log('================ PROMPT START ================');
+console.log(prompt);
+console.log('================ PROMPT END ==================');
 
 console.log(
   'FIRST AUDIT:',
-  JSON.stringify(audits?.[0], null, 2)
+  JSON.stringify(auditsForPrompt?.[0], null, 2)
+);
+console.log('AUDITS RECEIVED:', audits?.length);
+console.log('AUDITS USED:', auditsForPrompt?.length);
+
+console.log(
+  'FIRST AUDIT:',
+  JSON.stringify(auditsForPrompt?.[0], null, 2)
 );
 
 console.log(

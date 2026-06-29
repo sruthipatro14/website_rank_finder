@@ -120,6 +120,12 @@ const psiRes = await fetch(
 
 const psi = await psiRes.json();
 
+if (!psiRes.ok || psi?.error || !psi?.lighthouseResult) {
+  throw new Error(
+    psi?.error?.message || 'PageSpeed Insights did not return Lighthouse data'
+  );
+}
+
 console.log(
   'CATEGORY KEYS:',
   Object.keys(
@@ -182,6 +188,14 @@ const accessibilityScore =
 typeof categories.accessibility?.score === 'number'
   ? Math.round(categories.accessibility.score * 100)
   : null;
+
+if (
+  pagespeedScore === null ||
+  seoScore === null ||
+  accessibilityScore === null
+) {
+  throw new Error('PageSpeed Insights response is missing category scores');
+}
 
 const lcp =
 audits['largest-contentful-paint']?.numericValue ?? null;

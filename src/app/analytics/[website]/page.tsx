@@ -3,6 +3,34 @@ import AIRecommendations from '@/components/AIRecommendations';
 import AIChat from '@/components/AIChat';
 import RunAuditButton from '@/components/RunAuditButton';
 
+const hasCoreAuditMetrics = (audit: any) =>
+  audit.keyword !== null &&
+  audit.page_url !== null &&
+  audit.internal_links !== null &&
+  audit.external_links !== null &&
+  audit.missing_alt_images !== null &&
+  audit.canonical_url !== null &&
+  audit.schema_present !== null &&
+  audit.pagespeed_score !== null &&
+  audit.seo_score !== null &&
+  audit.accessibility_score !== null &&
+  audit.lcp !== null &&
+  audit.cls !== null;
+
+const latestAuditPerPage = (audits: any[] = []) => {
+  const latest = new Map<string, any>();
+
+  audits.forEach((audit) => {
+    const key = `${audit.keyword || ''}|${audit.page_url || ''}`;
+
+    if (hasCoreAuditMetrics(audit) && !latest.has(key)) {
+      latest.set(key, audit);
+    }
+  });
+
+  return Array.from(latest.values());
+};
+
 export default async function WebsiteAnalyticsPage({
   params,
 }: {
@@ -97,12 +125,17 @@ export default async function WebsiteAnalyticsPage({
   const { data: audits } = await supabase
     .from('website_audits')
     .select('*')
-    .eq('website', website);
+    .eq('website', website)
+    .order('created_at', { ascending: false });
 
-    const latestAudit =
-  audits && audits.length > 0
-    ? audits[audits.length - 1]
-    : null;
+  const aiAudits = latestAuditPerPage(audits || []);
+
+  const latestAudit =
+    aiAudits.length > 0
+      ? aiAudits[0]
+      : audits && audits.length > 0
+      ? audits[0]
+      : null;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -316,11 +349,11 @@ export default async function WebsiteAnalyticsPage({
         </h2>
 
         
-          <AIRecommendations
+<AIRecommendations
   website={website}
   rankings={rankings || []}
   changes={changes}
-  audits={audits || []}
+  audits={aiAudits}
   top10={top10}
   top20={top20}
   avgRank={avgRank}
@@ -334,7 +367,7 @@ export default async function WebsiteAnalyticsPage({
         rankings={rankings}
         changes={changes}
         scans={scans}
-        audits={audits || []}
+        audits={aiAudits}
       />
     </div>
     </div>
