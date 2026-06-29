@@ -39,6 +39,39 @@ ${JSON.stringify(audit.h2)}
 WORD COUNT:
 ${audit.word_count}
 
+PAGESPEED SCORE:
+${audit.pagespeed_score}
+
+SEO SCORE:
+${audit.seo_score}
+
+ACCESSIBILITY SCORE:
+${audit.accessibility_score}
+
+LCP:
+${audit.lcp}
+
+CLS:
+${audit.cls}
+
+INP:
+${audit.inp}
+
+INTERNAL LINKS:
+${audit.internal_links}
+
+EXTERNAL LINKS:
+${audit.external_links}
+
+MISSING ALT IMAGES:
+${audit.missing_alt_images}
+
+CANONICAL URL:
+${audit.canonical_url}
+
+SCHEMA PRESENT:
+${audit.schema_present}
+
 IMAGES:
 ${audit.images}
 
@@ -114,6 +147,18 @@ RULES
 10. If a recommendation is made:
     Explain exactly WHY using audit data or ranking data.
 
+11. When giving recommendations also analyze:
+
+- PageSpeed score
+- SEO score
+- Accessibility score
+- LCP
+- CLS
+- INP
+- Internal linking
+- Missing image alt text
+- Canonical tags
+- Structured data/schema
 ==================================================
 HOW TO ANALYZE
 ==================================================

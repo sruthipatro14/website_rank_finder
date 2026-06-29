@@ -99,6 +99,11 @@ export default async function WebsiteAnalyticsPage({
     .select('*')
     .eq('website', website);
 
+    const latestAudit =
+  audits && audits.length > 0
+    ? audits[audits.length - 1]
+    : null;
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-4xl font-bold mb-2">{website}</h1>
@@ -246,6 +251,65 @@ export default async function WebsiteAnalyticsPage({
     rankings={rankings || []}
      />
      </div>
+     {latestAudit && (
+  <div className="grid md:grid-cols-3 gap-4 mb-8">
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500 text-sm">
+        PageSpeed Score
+      </p>
+      <p className="text-3xl font-bold">
+        {latestAudit.pagespeed_score}
+      </p>
+    </div>
+
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500 text-sm">
+        SEO Score
+      </p>
+      <p className="text-3xl font-bold">
+        {latestAudit.seo_score}
+      </p>
+    </div>
+
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500 text-sm">
+        Accessibility Score
+      </p>
+      <p className="text-3xl font-bold">
+        {latestAudit.accessibility_score}
+      </p>
+    </div>
+
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500 text-sm">
+        Internal Links
+      </p>
+      <p className="text-3xl font-bold">
+        {latestAudit.internal_links}
+      </p>
+    </div>
+
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500 text-sm">
+        Missing Alt Images
+      </p>
+      <p className="text-3xl font-bold">
+        {latestAudit.missing_alt_images}
+      </p>
+    </div>
+
+    <div className="border rounded-xl p-4">
+      <p className="text-gray-500 text-sm">
+        LCP
+      </p>
+      <p className="text-3xl font-bold">
+        {latestAudit.lcp
+          ? latestAudit.lcp.toFixed(0)
+          : 'N/A'}
+      </p>
+    </div>
+  </div>
+)}
       <div className="rounded-xl border shadow-sm p-6">
         <h2 className="text-xl font-bold mb-4">
           SEO Recommendations

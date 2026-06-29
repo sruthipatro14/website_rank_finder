@@ -35,6 +35,7 @@ export default async function AnalyticsPage() {
 
     websitesMap.get(scan.website).totalScans++;
   });
+  
 
   const websites = Array.from(websitesMap.values());
 
