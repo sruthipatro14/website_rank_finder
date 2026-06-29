@@ -9,8 +9,25 @@ export default function RunAuditButton({
 }) {
   async function runAudit() {
     for (const ranking of rankings) {
-      if (!ranking.ranking_url) continue;
 
+console.log(
+  'AUDITING:',
+  ranking.keyword,
+  ranking.ranking_url
+);
+
+if (
+  !ranking.ranking_url ||
+  ranking.ranking_url === '-' ||
+  !ranking.ranking_url.startsWith('http')
+) {
+  console.log(
+    'SKIPPING INVALID URL:',
+    ranking.keyword,
+    ranking.ranking_url
+  );
+  continue;
+}
       await fetch('/api/website-audit', {
         method: 'POST',
         headers: {

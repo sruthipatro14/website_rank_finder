@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       avgRank,
     } = body;
 
+    
     const auditContext = audits
   ?.map(
     (audit: any) => `
@@ -83,6 +84,18 @@ ${audit.cls}
 
 INP:
 ${audit.inp}
+
+INTERNAL LINKS DATA:
+${JSON.stringify(audit.internal_links_data)}
+
+EXTERNAL LINKS DATA:
+${JSON.stringify(audit.external_links_data)}
+
+MISSING ALT IMAGES DATA:
+${JSON.stringify(audit.missing_alt_images_data)}
+
+IMAGES DATA:
+${JSON.stringify(audit.images_data)}
 
 CONTENT:
 ${audit.content?.slice(0, 1500) || ''}
@@ -227,7 +240,37 @@ List the highest impact opportunities supported by the data.
 If no opportunity is supported by the audit data, write:
 
 "No issue detected in the audit data."
+
+When analyzing internal linking, images, alt text,
+or external links, use the actual data provided.
+
+Do not rely only on counts.
+
+Reference exact URLs, image sources,
+and missing alt image sources whenever possible.
+
 `;
+console.log('AUDITS RECEIVED:', audits?.length);
+
+console.log(
+  'FIRST AUDIT:',
+  JSON.stringify(audits?.[0], null, 2)
+);
+
+console.log(
+  'RANKINGS:',
+  JSON.stringify(rankings, null, 2)
+);
+
+console.log(
+  'PROMPT LENGTH:',
+  prompt.length
+);
+
+console.log(
+  'PROMPT PREVIEW:\n',
+  prompt.slice(0, 10000)
+);
 
     const response = await fetch(
       'http://localhost:11434/api/generate',

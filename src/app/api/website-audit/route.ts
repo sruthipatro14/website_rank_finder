@@ -10,6 +10,16 @@ export async function POST(req: Request) {
       pageUrl,
     } = await req.json();
 
+    if (!pageUrl || pageUrl === '-') {
+  throw new Error(`Invalid page URL: ${pageUrl}`);
+}
+
+try {
+  new URL(pageUrl);
+} catch {
+  throw new Error(`Invalid page URL: ${pageUrl}`);
+}
+
     const response = await fetch(pageUrl);
 
     if (!response.ok) {
@@ -21,6 +31,15 @@ export async function POST(req: Request) {
     const $ = cheerio.load(html);
 
     const domain = new URL(pageUrl).hostname;
+
+
+    const imagesData = $('img')
+  .map((_, img) => ({
+    src: $(img).attr('src') || '',
+    alt: $(img).attr('alt') || '',
+  }))
+  .get();
+
 
     // TITLE
     const title = $('title').text().trim();
@@ -46,39 +65,45 @@ export async function POST(req: Request) {
     const links = $('a').length;
 
     // INTERNAL LINKS
-    const internalLinks = $('a')
-      .map((_, el) => $(el).attr('href'))
-      .get()
-      .filter((link) => {
-        if (!link) return false;
+    const internalLinksData = $('a')
+  .map((_, el) => $(el).attr('href'))
+  .get()
+  .filter((link) => {
+    if (!link) return false;
 
-        return (
-          link.startsWith('/') ||
-          link.includes(domain)
-        );
-      });
+    return (
+      link.startsWith('/') ||
+      link.includes(domain)
+    );
+  });
 
-    const internalLinkCount = internalLinks.length;
+    const internalLinkCount = internalLinksData.length;
 
     // EXTERNAL LINKS
-    const externalLinks = $('a')
-      .map((_, el) => $(el).attr('href'))
-      .get()
-      .filter((link) => {
-        if (!link) return false;
+    const externalLinksData = $('a')
+  .map((_, el) => $(el).attr('href'))
+  .get()
+  .filter((link) => {
+    if (!link) return false;
 
-        return (
-          link.startsWith('http') &&
-          !link.includes(domain)
-        );
-      });
+    return (
+      link.startsWith('http') &&
+      !link.includes(domain)
+    );
+  });
 
-    const externalLinkCount = externalLinks.length;
+const externalLinkCount = externalLinksData.length;
 
     // MISSING ALT IMAGES
-    const missingAltImages = $('img')
-      .filter((_, img) => !$(img).attr('alt'))
-      .length;
+    const missingAltImagesData = $('img')
+  .filter((_, img) => !$(img).attr('alt'))
+  .map((_, img) => ({
+    src: $(img).attr('src') || '',
+  }))
+  .get();
+
+const missingAltImages =
+  missingAltImagesData.length;
 
     // CANONICAL
     const canonicalUrl =
@@ -219,6 +244,12 @@ const auditData = {
   internal_links: internalLinkCount,
   external_links: externalLinkCount,
   missing_alt_images: missingAltImages,
+
+  internal_links_data: internalLinksData,
+  external_links_data: externalLinksData,
+  missing_alt_images_data: missingAltImagesData,
+  images_data: imagesData,
+
   canonical_url: canonicalUrl,
   schema_present: schemaPresent,
 
