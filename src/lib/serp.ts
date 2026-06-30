@@ -21,10 +21,25 @@ export function getDomain(url: string): string {
  * Matches: exact root domain, www, and subdomains (e.g. blog.example.com).
  * Does NOT match unrelated domains that happen to end with the same string.
  */
-export function isDomainMatch(resultUrl: string, targetDomain: string): boolean {
+export function isDomainMatch(
+  resultUrl: string,
+  targetDomain: string
+): boolean {
   const result = getDomain(resultUrl);
   const target = getDomain(targetDomain);
-  return result === target || result.endsWith(`.${target}`);
+
+  const resultClean = result
+    .replace(/^www\./, '')
+    .toLowerCase();
+
+  const targetClean = target
+    .replace(/^www\./, '')
+    .toLowerCase();
+
+  return (
+    resultClean === targetClean ||
+    resultClean.endsWith(`.${targetClean}`)
+  );
 }
 
 // Error message fragments that indicate an API availability / credit / key issue.
@@ -151,7 +166,7 @@ export async function fetchSerpResults(
     countryParam += '&hl=en';
   }
 
-  const PAGES = [0, 10, 20, 30, 40]; // start offsets covering positions 1–30
+  const PAGES = [0, 10, 20, 30, 40,50, 60, 70, 80, 90]; // start offsets covering positions 1–30
   let lastStatus: number | null = null;
   const allRaw: SerpSearchResult[] = [];
 
@@ -172,6 +187,7 @@ export async function fetchSerpResults(
       }
 
       const pageOrganic: any[] = data.organic_results || [];
+      
       console.debug(`[serp] Page start=${start} returned ${pageOrganic.length} results for "${keyword}"`);
 
       if (pageOrganic.length === 0) {
@@ -238,8 +254,35 @@ export async function checkKeywordRanking(
   });
 
   const sorted = [...results].sort((a, b) => a.position - b.position);
-  const found = sorted.find((result) => isDomainMatch(result.link, targetDomain));
+  console.log('====================================');
+console.log('TARGET DOMAIN:', targetDomain);
+console.log('KEYWORD:', keyword);
 
+sorted.forEach((result) => {
+  console.log({
+    position: result.position,
+    url: result.link,
+    domain: getDomain(result.link),
+    matched: isDomainMatch(result.link, targetDomain),
+  });
+});
+
+const found = sorted.find((result) =>
+  isDomainMatch(result.link, targetDomain)
+);
+
+console.log('FOUND RESULT:', found);
+console.log('====================================');
+const possibleMatches = sorted.filter((result) =>
+  getDomain(result.link).includes(
+    targetDomain.replace(/^www\./, '')
+  )
+);
+
+console.log(
+  'POSSIBLE DOMAIN MATCHES:',
+  possibleMatches
+);
   if (!found) {
     console.debug(`[serp:match] No match found for target="${targetDomain}" keyword="${keyword}"`);
     return {

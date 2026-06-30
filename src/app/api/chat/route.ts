@@ -78,6 +78,18 @@ ${audit.images}
 LINKS:
 ${audit.links}
 
+INTERNAL LINKS DATA:
+${JSON.stringify(audit.internal_links_data, null, 2)}
+
+EXTERNAL LINKS DATA:
+${JSON.stringify(audit.external_links_data, null, 2)}
+
+MISSING ALT IMAGES DATA:
+${JSON.stringify(audit.missing_alt_images_data, null, 2)}
+
+IMAGES DATA:
+${JSON.stringify(audit.images_data, null, 2)}
+
 CONTENT:
 ${audit.content?.slice(0, 2000) || ''}
 `
@@ -102,6 +114,44 @@ ${JSON.stringify(changes, null, 2)}
 
 SCAN DATA:
 ${JSON.stringify(scans, null, 2)}
+
+AUDITS:
+${JSON.stringify(audits, null, 2)}
+
+You have FULL access to the audit data.
+
+Do not only summarize metrics.
+
+Inspect the detailed datasets and identify:
+
+- Internal linking opportunities
+- Orphan page signals
+- Missing alt text patterns
+- Image optimization opportunities
+- Content structure weaknesses
+- Schema opportunities
+- Ranking opportunities
+
+Only use evidence found in the supplied audit data.
+
+The audit contains detailed datasets.
+
+When available, analyze:
+
+- Internal links data
+- External links data
+- Missing alt image data
+- Images data
+- Backlink data
+- Schema data
+- Heading structure
+
+Do not rely only on counts.
+
+Use actual URLs, image sources, anchor text,
+and link destinations when making recommendations.
+
+If detailed data exists, cite specific examples.
 
 ==================================================
 RULES
