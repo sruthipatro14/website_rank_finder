@@ -185,9 +185,33 @@ export async function fetchSerpResults(
         const errorMessage = data.error || data.error_message || `SerpApi returned status ${res.status}`;
         throw new Error(`SerpApi error for "${keyword}" (start=${start}): ${errorMessage}`);
       }
-
+console.log(
+  JSON.stringify(data, null, 2)
+);
       const pageOrganic: any[] = data.organic_results || [];
       
+      const localPlaces = data.local_results?.places || [];
+
+const mappedLocal: SerpSearchResult[] = localPlaces.map(
+  (place: any, index: number) => ({
+    position: place.position || index + 1,
+    title: place.title || '',
+    displayedUrl: place.links?.website || '',
+    link: place.links?.website || '',
+  })
+);
+
+allRaw.push(...mappedLocal);
+
+console.log(
+  'LOCAL RESULTS:',
+  localPlaces.map((p: any) => ({
+    position: p.position,
+    title: p.title,
+    website: p.links?.website
+  }))
+);
+
       console.debug(`[serp] Page start=${start} returned ${pageOrganic.length} results for "${keyword}"`);
 
       if (pageOrganic.length === 0) {
