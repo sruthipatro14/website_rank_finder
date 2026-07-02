@@ -84,6 +84,7 @@ export default function HomePage() {
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState('');
   const [importStats, setImportStats] = useState<ImportStats | null>(null);
+  const [location, setLocation] = useState('');
 
   const selectedColumnIndex = selectedImportColumn === '' ? -1 : Number(selectedImportColumn);
 
@@ -243,6 +244,7 @@ export default function HomePage() {
           engine,
           country,
           device,
+          location,
         }),
       });
 
@@ -372,20 +374,48 @@ export default function HomePage() {
               </div>
 
               <div>
-                <label htmlFor="country" className="mb-3 block text-sm font-semibold text-slate-700">
-                  Country
-                </label>
-                <select
-                  id="country"
-                  value={country}
-                  onChange={(event) => setCountry(event.target.value as CountryCode)}
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
-                >
-                  {COUNTRY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+  <label
+    htmlFor="country"
+    className="mb-3 block text-sm font-semibold text-slate-700"
+  >
+    Country
+  </label>
+
+  <select
+    id="country"
+    value={country}
+    onChange={(event) =>
+      setCountry(event.target.value as CountryCode)
+    }
+    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+  >
+    {COUNTRY_OPTIONS.map((option) => (
+      <option key={option.value} value={option.value}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+</div>
+
+              <div>
+  <label
+    htmlFor="location"
+    className="mb-3 block text-sm font-semibold text-slate-700"
+  >
+    Location (optional)
+  </label>
+
+  <input
+    id="location"
+    type="text"
+    value={location}
+    onChange={(event) => setLocation(event.target.value)}
+    placeholder="Hyderabad, Telangana, India"
+    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+  />
+</div>
+
+              
 
               <div>
                 <label htmlFor="device" className="mb-3 block text-sm font-semibold text-slate-700">

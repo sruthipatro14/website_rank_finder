@@ -149,6 +149,7 @@ export async function fetchSerpResults(
   engine: string = 'google',
   country: CountryCode = 'in',
   device: DeviceType = 'desktop',
+  location?: string,
 ): Promise<{ results: SerpSearchResult[]; status?: number | null }> {
   const apiKey = process.env.SERP_API_KEY ?? '';
   console.debug('[serp] SERP_API_KEY present:', Boolean(apiKey));
@@ -172,8 +173,25 @@ export async function fetchSerpResults(
 
   try {
     for (const start of PAGES) {
-      const serpApiUrl = `https://serpapi.com/search.json?engine=${engine}&q=${encodeURIComponent(keyword)}&num=10&start=${start}&${countryParam}&device=${device}&api_key=${apiKey}`;
-      console.debug(`[serp] Fetching page start=${start} for "${keyword}" (URL: ${serpApiUrl.split('api_key=')[0]}...)`);
+      const locationParam =
+  location && engine === 'google'
+    ? `&location=${encodeURIComponent(location)}`
+    : '';
+
+const serpApiUrl =
+  `https://serpapi.com/search.json?engine=${engine}` +
+  `&q=${encodeURIComponent(keyword)}` +
+  `&num=10` +
+  `&start=${start}` +
+  `&${countryParam}` +
+  `${locationParam}` +
+  `&device=${device}` +
+  `&api_key=${apiKey}`;
+  
+  console.debug(`[serp] Fetching page start=${start} for "${keyword}" (URL: ${serpApiUrl.split('api_key=')[0]}...)`);
+
+  console.log('SERP LOCATION:', location);
+  console.log('SERP URL:', serpApiUrl);
 
       const res = await fetch(serpApiUrl);
       lastStatus = res.status;
@@ -256,12 +274,19 @@ export async function checkKeywordRanking(
   engine: string = 'google',
   country: CountryCode = 'in',
   device: DeviceType = 'desktop',
+  location?: string,
 ): Promise<{ result: RankResult; serpStatus?: number | null }> {
   let results: SerpSearchResult[] = [];
   let status: number | null = null;
 
   try {
-    const serpResponse = await fetchSerpResults(keyword, engine, country, device);
+    const serpResponse = await fetchSerpResults(
+  keyword,
+  engine,
+  country,
+  device,
+  location
+);
     results = serpResponse.results;
     status = serpResponse.status ?? null;
   } catch (error) {

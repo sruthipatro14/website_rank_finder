@@ -9,6 +9,7 @@ interface CheckRankPayload {
   engine?: string;
   country?: CountryCode;
   device?: DeviceType;
+  location?: string;
 }
 
 const KEYWORD_CONCURRENCY_LIMIT = 2;
@@ -87,6 +88,12 @@ export async function POST(request: Request) {
     console.debug('[api/check-rank] Selected country:', country);
 
     const device = payload.device || 'desktop';
+    const location = payload.location?.trim();
+
+    console.debug(
+   '[api/check-rank] Selected location:',
+   location || 'none'
+   );
     console.debug('[api/check-rank] Selected device:', device);
 
     console.debug(
@@ -95,7 +102,7 @@ export async function POST(request: Request) {
     const checks = await runKeywordChecksWithLimit(
       keywords,
       KEYWORD_CONCURRENCY_LIMIT,
-      (keyword) => checkKeywordRanking(targetDomain, keyword, engine, country, device),
+      (keyword) => checkKeywordRanking(targetDomain, keyword, engine, country, device,location),
     );
 
     const results: RankResult[] = checks.map((c) => c.result);
