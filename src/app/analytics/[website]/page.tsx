@@ -364,7 +364,7 @@ export default async function WebsiteAnalyticsPage({
       <div className="mt-8">
       <AIChat
         website={website}
-        rankings={rankings}
+        rankings={rankings ?? []}
         changes={changes}
         scans={scans}
         audits={aiAudits}
