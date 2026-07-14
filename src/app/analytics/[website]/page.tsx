@@ -294,60 +294,72 @@ export default async function WebsiteAnalyticsPage({
      </div>
      {latestAudit && (
   <div className="grid md:grid-cols-3 gap-4 mb-8">
-    <div className="border rounded-xl p-4">
-      <p className="text-gray-500 text-sm">
-        PageSpeed Score
-      </p>
-      <p className="text-3xl font-bold">
-        {latestAudit.pagespeed_score}
-      </p>
+    <div className="relative border rounded-xl p-4">
+      <p className="text-gray-500 text-sm mb-1">PageSpeed Score</p>
+      <p className="text-3xl font-bold">{latestAudit.pagespeed_score}</p>
+      <div className="absolute bottom-2 right-2 group">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[13px] cursor-pointer select-none transition-transform hover:scale-110 hover:bg-gray-200 hover:text-gray-700">ⓘ</span>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 shadow-lg leading-relaxed">
+          Overall loading speed of the page measured by Google. Higher is better. Good: 90+.
+        </div>
+      </div>
     </div>
 
-    <div className="border rounded-xl p-4">
-      <p className="text-gray-500 text-sm">
-        SEO Score
-      </p>
-      <p className="text-3xl font-bold">
-        {latestAudit.seo_score}
-      </p>
+    <div className="relative border rounded-xl p-4">
+      <p className="text-gray-500 text-sm mb-1">SEO Score</p>
+      <p className="text-3xl font-bold">{latestAudit.seo_score}</p>
+      <div className="absolute bottom-2 right-2 group">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[13px] cursor-pointer select-none transition-transform hover:scale-110 hover:bg-gray-200 hover:text-gray-700">ⓘ</span>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 shadow-lg leading-relaxed">
+          Overall SEO health of the page. Covers meta tags, structure and crawlability. Higher is better. Good: 90+.
+        </div>
+      </div>
     </div>
 
-    <div className="border rounded-xl p-4">
-      <p className="text-gray-500 text-sm">
-        Accessibility Score
-      </p>
-      <p className="text-3xl font-bold">
-        {latestAudit.accessibility_score}
-      </p>
+    <div className="relative border rounded-xl p-4">
+      <p className="text-gray-500 text-sm mb-1">Accessibility Score</p>
+      <p className="text-3xl font-bold">{latestAudit.accessibility_score}</p>
+      <div className="absolute bottom-2 right-2 group">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[13px] cursor-pointer select-none transition-transform hover:scale-110 hover:bg-gray-200 hover:text-gray-700">ⓘ</span>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 shadow-lg leading-relaxed">
+          Shows how easy the site is to use for all visitors, including those with disabilities. Higher is better. Good: 90+.
+        </div>
+      </div>
     </div>
 
-    <div className="border rounded-xl p-4">
-      <p className="text-gray-500 text-sm">
-        Internal Links
-      </p>
-      <p className="text-3xl font-bold">
-        {latestAudit.internal_links}
-      </p>
+    <div className="relative border rounded-xl p-4">
+      <p className="text-gray-500 text-sm mb-1">Internal Links</p>
+      <p className="text-3xl font-bold">{latestAudit.internal_links}</p>
+      <div className="absolute bottom-2 right-2 group">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[13px] cursor-pointer select-none transition-transform hover:scale-110 hover:bg-gray-200 hover:text-gray-700">ⓘ</span>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 shadow-lg leading-relaxed">
+          Number of links pointing to other pages on your own site. More internal links help Google discover and index your content.
+        </div>
+      </div>
     </div>
 
-    <div className="border rounded-xl p-4">
-      <p className="text-gray-500 text-sm">
-        Missing Alt Images
-      </p>
-      <p className="text-3xl font-bold">
-        {latestAudit.missing_alt_images}
-      </p>
+    <div className="relative border rounded-xl p-4">
+      <p className="text-gray-500 text-sm mb-1">Missing Alt Images</p>
+      <p className="text-3xl font-bold">{latestAudit.missing_alt_images}</p>
+      <div className="absolute bottom-2 right-2 group">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[13px] cursor-pointer select-none transition-transform hover:scale-110 hover:bg-gray-200 hover:text-gray-700">ⓘ</span>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 shadow-lg leading-relaxed">
+          Images without alt text. Search engines use alt text to understand images. Lower is better. Good: 0.
+        </div>
+      </div>
     </div>
 
-    <div className="border rounded-xl p-4">
-      <p className="text-gray-500 text-sm">
-        LCP
-      </p>
+    <div className="relative border rounded-xl p-4">
+      <p className="text-gray-500 text-sm mb-1">LCP</p>
       <p className="text-3xl font-bold">
-        {latestAudit.lcp
-          ? latestAudit.lcp.toFixed(0)
-          : 'N/A'}
+        {latestAudit.lcp ? `${(latestAudit.lcp / 1000).toFixed(2)}s` : 'N/A'}
       </p>
+      <div className="absolute bottom-2 right-2 group">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[13px] cursor-pointer select-none transition-transform hover:scale-110 hover:bg-gray-200 hover:text-gray-700">ⓘ</span>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 shadow-lg leading-relaxed">
+          Largest Contentful Paint — measures how quickly the main content loads. Lower is better. Good: under 2.5s.
+        </div>
+      </div>
     </div>
   </div>
 )}

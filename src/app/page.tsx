@@ -341,7 +341,7 @@ export default function HomePage() {
 </div>
           <div className="max-w-3xl">
             <p className="mb-4 inline-flex rounded-full bg-sky-100 px-4 py-1 text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
-              SERP Rank Tracker
+              Rank Tracker
             </p>
             <h1 className="text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
               Monitor Google rankings for your website keywords.
