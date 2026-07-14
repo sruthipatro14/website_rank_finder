@@ -347,7 +347,7 @@ export default function HomePage() {
               Monitor Google rankings for your website keywords.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-              Enter your website URL and keywords to compare your domain against the first 100 organic results. This lightweight dashboard uses a server-side API route for ranking checks.
+              Enter your website URL and keywords to compare your domain against the first 100 organic results. 
             </p>
           </div>
         </header>
@@ -614,7 +614,7 @@ export default function HomePage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">How it works</p>
                 <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">Server-side ranking checks</h2>
                 <p className="mt-4 text-sm leading-7 text-slate-600">
-                  The form submits to a Next.js API route that fetches SERP results, normalizes domains, and returns the exact ranking position for each keyword. Set your API key in <code className="rounded bg-slate-100 px-1 py-0.5 text-sm text-slate-700">SERP_API_KEY</code>.
+                Input your keywords, and we’ll instantly find your precise search engine positions.
                 </p>
               </div>
 
