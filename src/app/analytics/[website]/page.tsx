@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import AIRecommendations from '@/components/AIRecommendations';
 import AIChat from '@/components/AIChat';
 import RunAuditButton from '@/components/RunAuditButton';
+import RankingChanges from '@/components/RankingChanges';
 
 const hasCoreAuditMetrics = (audit: any) =>
   audit.keyword !== null &&
@@ -67,6 +68,18 @@ export default async function WebsiteAnalyticsPage({
         .select('*')
         .eq('scan_id', previousScan.id)
     : { data: [] };
+
+  // Fetch rankings for all previous scans so the dropdown can compare any of them
+  const previousScans = scans.slice(1);
+  const previousScansWithRankings = await Promise.all(
+    previousScans.map(async (scan) => {
+      const { data: scanRankings } = await supabase
+        .from('ranking_results')
+        .select('*')
+        .eq('scan_id', scan.id);
+      return { ...scan, rankings: scanRankings || [] };
+    })
+  );
 
   const totalKeywords = rankings?.length || 0;
 
@@ -196,47 +209,11 @@ export default async function WebsiteAnalyticsPage({
       </div>
 
       {previousScan && (
-        <div className="rounded-xl border shadow-sm mb-8 overflow-hidden">
-          <div className="bg-black text-white p-4">
-            <h2 className="text-xl font-bold">
-              Ranking Changes
-            </h2>
-          </div>
-
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-4 text-left">Keyword</th>
-                <th className="border p-4 text-left">Old Rank</th>
-                <th className="border p-4 text-left">New Rank</th>
-                <th className="border p-4 text-left">Change</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {changes.map((item) => (
-                <tr key={item.keyword}>
-                  <td className="border p-4">{item.keyword}</td>
-                  <td className="border p-4">{item.oldRank}</td>
-                  <td className="border p-4">{item.newRank}</td>
-                  <td
-                    className={`border p-4 font-bold ${
-                      item.change > 0
-                        ? 'text-green-600'
-                        : item.change < 0
-                        ? 'text-red-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    {item.change > 0
-                      ? `+${item.change}`
-                      : item.change}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RankingChanges
+          latestScanRankings={rankings || []}
+          latestScanDate={latestScan.scan_date}
+          previousScans={previousScansWithRankings}
+        />
       )}
 
       {previousScan && (

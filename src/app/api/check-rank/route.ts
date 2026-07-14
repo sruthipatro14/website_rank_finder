@@ -124,10 +124,10 @@ if (scan) {
   const rankingRows = results.map((r) => ({
     scan_id: scan.id,
     keyword: r.keyword,
-    rank: r.rank,
-    ranking_url: r.rankingUrl || null,
-    page: r.page || null,
-    position_on_page: r.positionOnPage || null,
+    rank: r.rank === 'Not Found' ? null : r.rank,
+    ranking_url: r.rankingUrl === '-' ? null : r.rankingUrl || null,
+    page: r.page === '-' ? null : r.page || null,
+    position_on_page: r.positionOnPage === '-' ? null : r.positionOnPage || null,
   }));
 
   const { error } = await supabase
