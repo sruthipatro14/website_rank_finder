@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import AIRecommendations from '@/components/AIRecommendations';
 import AIChat from '@/components/AIChat';
@@ -34,10 +35,13 @@ const latestAuditPerPage = (audits: any[] = []) => {
 
 export default async function WebsiteAnalyticsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ website: string }>;
+  searchParams: Promise<{ scanId?: string }>;
 }) {
   const { website: encodedWebsite } = await params;
+  const { scanId } = await searchParams;
   const website = decodeURIComponent(encodedWebsite);
 
   const { data: scans } = await supabase
@@ -54,13 +58,19 @@ export default async function WebsiteAnalyticsPage({
     );
   }
 
-  const latestScan = scans[0];
-  const previousScan = scans.length > 1 ? scans[1] : null;
+  // Use the scan from the URL query param, falling back to the most recent scan
+  console.log('[analytics] scanId from URL:', scanId, '| typeof:', typeof scanId);
+  console.log('[analytics] available scan ids:', scans.map((s) => `${s.id} (${typeof s.id})`));
+  const foundScan = scanId ? scans.find((s) => String(s.id) === String(scanId)) : null;
+  console.log('[analytics] scans.find result:', foundScan?.id ?? 'NOT FOUND — falling back to scans[0]');
+  const activeScan = foundScan ?? scans[0];
+  console.log('[analytics] activeScan.id:', activeScan.id, '| using fallback:', !foundScan);
+  const previousScan = scans.length > 1 ? scans.find((s) => s.id !== activeScan.id) : null;
 
   const { data: rankings } = await supabase
     .from('ranking_results')
     .select('*')
-    .eq('scan_id', latestScan.id);
+    .eq('scan_id', activeScan.id);
 
   const { data: previousRankings } = previousScan
     ? await supabase
@@ -69,8 +79,8 @@ export default async function WebsiteAnalyticsPage({
         .eq('scan_id', previousScan.id)
     : { data: [] };
 
-  // Fetch rankings for all previous scans so the dropdown can compare any of them
-  const previousScans = scans.slice(1);
+  // Fetch rankings for all scans except the active one for the comparison dropdown
+  const previousScans = scans.filter((s) => s.id !== activeScan.id);
   const previousScansWithRankings = await Promise.all(
     previousScans.map(async (scan) => {
       const { data: scanRankings } = await supabase
@@ -158,7 +168,7 @@ export default async function WebsiteAnalyticsPage({
         Website SEO Analytics
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="rounded-xl border p-4 shadow-sm">
           <p className="text-sm text-gray-500">Total Scans</p>
           <p className="text-3xl font-bold">{scans.length}</p>
@@ -172,11 +182,6 @@ export default async function WebsiteAnalyticsPage({
         <div className="rounded-xl border p-4 shadow-sm">
           <p className="text-sm text-gray-500">Top 10 Rankings</p>
           <p className="text-3xl font-bold text-green-600">{top10}</p>
-        </div>
-
-        <div className="rounded-xl border p-4 shadow-sm">
-          <p className="text-sm text-gray-500">Average Rank</p>
-          <p className="text-3xl font-bold">{avgRank}</p>
         </div>
       </div>
 
@@ -195,28 +200,54 @@ export default async function WebsiteAnalyticsPage({
           </thead>
 
           <tbody>
-            {scans.map((scan) => (
-              <tr key={scan.id} className="hover:bg-gray-50">
-                <td className="border p-4">
-                  {new Date(scan.scan_date).toLocaleString()}
-                </td>
-                <td className="border p-4">{scan.country}</td>
-                <td className="border p-4">{scan.device}</td>
-              </tr>
-            ))}
+            {scans.map((scan) => {
+              const isActive = scan.id === activeScan.id;
+              return (
+                <tr
+                  key={scan.id}
+                  className={`cursor-pointer transition-colors ${
+                    isActive
+                      ? 'bg-sky-50 border-l-4 border-l-sky-500'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <td className="border p-4" colSpan={3}>
+                    <Link
+                      href={`/analytics/${encodedWebsite}?scanId=${scan.id}`}
+                      className="grid grid-cols-3 w-full"
+                    >
+                      <span className={isActive ? 'font-semibold text-sky-700' : ''}>
+                        {new Date(scan.scan_date).toLocaleString()}
+                        {isActive && (
+                          <span className="ml-2 text-xs bg-sky-100 text-sky-700 rounded-full px-2 py-0.5">
+                            viewing
+                          </span>
+                        )}
+                      </span>
+                      <span className={isActive ? 'font-semibold text-sky-700' : ''}>
+                        {scan.country}
+                      </span>
+                      <span className={isActive ? 'font-semibold text-sky-700' : ''}>
+                        {scan.device}
+                      </span>
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {previousScan && (
+      {previousScans.length > 0 && (
         <RankingChanges
           latestScanRankings={rankings || []}
-          latestScanDate={latestScan.scan_date}
+          latestScanDate={activeScan.scan_date}
           previousScans={previousScansWithRankings}
         />
       )}
 
-      {previousScan && (
+      {previousScans.length > 0 && (
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="rounded-xl border p-6 shadow-sm">
             <h2 className="text-xl font-bold mb-4 text-green-600">
